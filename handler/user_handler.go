@@ -48,7 +48,7 @@ func (h *Handler) GetMe(c echo.Context) error {
 // @Router /users/signup [post]
 func (h *Handler) CreateUser(c echo.Context) error {
 	type UserInput struct {
-		Username string `json:"username" validate:"required,max=30"`
+		Username string `json:"username" validate:"required,max=20,username_chars"`
 		Password string `json:"password" validate:"required,max=128"`
 	}
 
