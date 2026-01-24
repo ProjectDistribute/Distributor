@@ -23,7 +23,7 @@ COPY distributor/go.mod distributor/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY distributor/ ./
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
-    xx-go build -ldflags="-s -w" -o distributor .
+    CGO_ENABLED=1 xx-go build -ldflags="-s -w" -o distributor .
 
 # -- Stage 3: Final Runner --
 FROM alpine:latest AS runner
