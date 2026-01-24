@@ -1,0 +1,56 @@
+# syntax=docker/dockerfile:1
+
+# -- Stage 1: Build Frontend --
+# -- Stage 1: Build Frontend --
+FROM node:22-alpine AS frontend-builder
+WORKDIR /app-frontend
+COPY admin/package.json admin/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY admin/index.html ./
+COPY admin/vite.config.js ./
+COPY admin/eslint.config.js ./
+COPY admin/public ./public
+COPY admin/src ./src
+RUN npm run build
+
+# -- Stage 2: Build Backend --
+FROM golang:1.25-alpine AS backend-builder
+WORKDIR /app-backend
+RUN apk add --no-cache build-base git
+COPY distributor/go.mod distributor/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY distributor/ ./
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod go build -ldflags="-s -w" -o distributor .
+
+# -- Stage 3: Final Runner --
+FROM alpine:latest AS runner
+WORKDIR /app
+
+RUN apk add --no-cache ffmpeg ca-certificates su-exec && \
+    adduser -D -g '' appuser
+
+COPY --from=backend-builder /app-backend/distributor /usr/local/bin/distributor
+COPY distributor/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+COPY --from=frontend-builder /app-frontend/dist /app/web
+
+ENV LISTEN_ON=0.0.0.0:8585
+EXPOSE 8585
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["distributor"]
+
+
+# -- Stage 4: Development (Hot Reload) --
+FROM golang:1.25-alpine AS dev
+WORKDIR /app
+RUN apk add --no-cache git build-base
+RUN go install github.com/air-verse/air@latest
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+COPY distributor/go.mod distributor/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY distributor/ ./
+CMD ["air", "-c", ".air.toml"]
+
+
