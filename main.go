@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var version = "s0.2.0"
+var version = "s0.2.1"
 
 // @title Distributor API
 // @version 1.0
