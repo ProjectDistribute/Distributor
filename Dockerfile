@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # -- Stage 1: Build Frontend --
-# -- Stage 1: Build Frontend --
-FROM node:22-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
 WORKDIR /app-frontend
 COPY admin/package.json admin/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
@@ -14,13 +13,17 @@ COPY admin/src ./src
 RUN npm run build
 
 # -- Stage 2: Build Backend --
-FROM golang:1.25-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS backend-builder
+COPY --from=tonistiigi/xx / /
 WORKDIR /app-backend
-RUN apk add --no-cache build-base git
+ARG TARGETPLATFORM
+RUN apk add --no-cache git clang lld
+RUN xx-apk add --no-cache musl-dev gcc
 COPY distributor/go.mod distributor/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY distributor/ ./
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod go build -ldflags="-s -w" -o distributor .
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
+    xx-go build -ldflags="-s -w" -o distributor .
 
 # -- Stage 3: Final Runner --
 FROM alpine:latest AS runner
