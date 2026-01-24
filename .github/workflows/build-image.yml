@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: projectdistribute/distributor
+  IMAGE_NAME: sourcelocation/distributor
 
 jobs:
   build-and-push:
