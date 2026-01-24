@@ -1,0 +1,18 @@
+# Git
+.git
+.gitignore
+.github
+
+# OS
+.DS_Store
+
+# Go
+distributor/bin/
+distributor/distributor # Binary if built locally
+distributor/tmp/
+distributor/vendor/
+
+# Node
+admin/node_modules/
+admin/dist/
+admin/coverage/
