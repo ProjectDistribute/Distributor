@@ -2,7 +2,7 @@
 
 ## Roadmap
 **s0.2.0**:
-- [x] Works with DistributeApp
+- [x] Works with Distribute
 - [x] Song, artists, albums management
 - [x] User accounts and authentication
 - [x] Admin HTTP API for managing content
