@@ -49,10 +49,10 @@ CMD ["distributor"]
 FROM golang:1.25-alpine AS dev
 WORKDIR /app
 RUN apk add --no-cache git build-base
-RUN go install github.com/air-verse/air@latest
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN --mount=type=cache,target=/go/pkg/mod go install github.com/air-verse/air@latest
+RUN --mount=type=cache,target=/go/pkg/mod go install github.com/go-delve/delve/cmd/dlv@latest
 COPY distributor/go.mod distributor/go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN go mod download
 COPY distributor/ ./
 CMD ["air", "-c", ".air.toml"]
 

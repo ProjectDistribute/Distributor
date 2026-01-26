@@ -4,16 +4,17 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./tmp/main"
+  entrypoint = "./tmp/main"
   cmd = "go build -gcflags=\"all=-N -l\" -o ./tmp/main ."
   delay = 1000
-  exclude_dir = ["data", "db", "docs", "tmp", "web"]
+  exclude_dir = []
   exclude_file = []
+  include_file = ["go.mod", "go.sum", "main.go"]
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
   follow_symlink = false
   full_bin = "dlv exec ./tmp/main --headless=true --listen=:40000 --api-version=2 --accept-multiclient --continue"
-  include_dir = []
+  include_dir = ["handler", "middleware", "model", "router", "service", "store", "task", "utils"]
   include_ext = ["go", "tpl", "tmpl", "html"]
   kill_delay = "0s"
   log = "build-errors.log"
