@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Logging setup
-	logFile, err := os.OpenFile("data/server_events.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("data/db/server_events.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Printf("Failed to open log file: %v\n", err)
 	} else {

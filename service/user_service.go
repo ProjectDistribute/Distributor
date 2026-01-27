@@ -66,7 +66,7 @@ func (s *UserService) GenerateToken(user *model.User) (string, error) {
 	claims := &middleware.JwtCustomClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID.String(),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 30)),
 		},
 		Admin: user.IsAdmin,
 	}
