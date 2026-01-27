@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ProjectDistribute/distributor/model"
+	"github.com/ProjectDistribute/distributor/utils"
 	"github.com/google/uuid"
 	"github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
@@ -82,10 +83,11 @@ func (ps *PlaylistStore) GetPlaylistByID(playlistID uuid.UUID) (*model.Playlist,
 	var playlist model.Playlist
 	if err := ps.db.
 		Preload("PlaylistFolder.User").
-		Preload("Songs").
-		Preload("Songs.SongFiles").
-		// Preload("Songs.Album").
-		// Preload("Songs.Album.Artist").
+		Preload("PlaylistSongs", func(db *gorm.DB) *gorm.DB {
+			return db.Order("\"order\" ASC, created_at ASC")
+		}).
+		Preload("PlaylistSongs.Song").
+		Preload("PlaylistSongs.Song.SongFiles").
 		First(&playlist, "id = ?", playlistID).
 		Error; err != nil {
 		return nil, err
@@ -95,32 +97,54 @@ func (ps *PlaylistStore) GetPlaylistByID(playlistID uuid.UUID) (*model.Playlist,
 }
 
 func (ps *PlaylistStore) AddSongToPlaylist(playlistID uuid.UUID, songID uuid.UUID) error {
-	playlist := model.Playlist{ID: playlistID}
-	song := model.Song{ID: songID}
 
-	err := ps.db.Model(&playlist).Association("Songs").Append(&song)
-	if err != nil {
+	var lastMapping model.PlaylistSong
+	err := ps.db.Where("playlist_id = ?", playlistID).Order("\"order\" desc").First(&lastMapping).Error
+
+	nextOrder := "a0"
+	if err == nil {
+		nextOrder = utils.GenerateNextKey(lastMapping.Order)
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
-	// Force update UpdatedAt
-	ps.db.Model(&playlist).Update("updated_at", time.Now())
+	mapping := model.PlaylistSong{
+		PlaylistID: playlistID,
+		SongID:     songID,
+		Order:      nextOrder,
+		CreatedAt:  time.Now(),
+	}
+
+	if err := ps.db.Create(&mapping).Error; err != nil {
+		return err
+	}
+
+	// Force update UpdatedAt on playlist
+	ps.db.Model(&model.Playlist{ID: playlistID}).Update("updated_at", time.Now())
 
 	return nil
 }
 
 func (ps *PlaylistStore) RemoveSongFromPlaylist(playlistID uuid.UUID, songID uuid.UUID) error {
-	playlist := model.Playlist{ID: playlistID}
-	song := model.Song{ID: songID}
-
-	err := ps.db.Model(&playlist).Association("Songs").Delete(&song)
-	if err != nil {
+	if err := ps.db.Delete(&model.PlaylistSong{}, "playlist_id = ? AND song_id = ?", playlistID, songID).Error; err != nil {
 		return err
 	}
 
 	// Force update UpdatedAt
-	ps.db.Model(&playlist).Update("updated_at", time.Now())
+	ps.db.Model(&model.Playlist{ID: playlistID}).Update("updated_at", time.Now())
 
+	return nil
+}
+
+func (ps *PlaylistStore) UpdateSongOrder(playlistID uuid.UUID, songID uuid.UUID, newOrder string) error {
+	err := ps.db.Model(&model.PlaylistSong{}).
+		Where("playlist_id = ? AND song_id = ?", playlistID, songID).
+		Update("order", newOrder).Error
+	if err != nil {
+		return err
+	}
+	// Force update UpdatedAt
+	ps.db.Model(&model.Playlist{ID: playlistID}).Update("updated_at", time.Now())
 	return nil
 }
 
@@ -202,7 +226,9 @@ func (ps *PlaylistStore) GetDeletedFolders(userID uuid.UUID, since time.Time) ([
 
 func (ps *PlaylistStore) GetPlaylistsByIDs(ids []uuid.UUID) ([]model.Playlist, error) {
 	var playlists []model.Playlist
-	err := ps.db.Preload("Songs").Where("id IN ?", ids).Find(&playlists).Error
+	err := ps.db.Preload("PlaylistSongs", func(db *gorm.DB) *gorm.DB {
+		return db.Order("\"order\" ASC, created_at ASC")
+	}).Preload("PlaylistSongs.Song").Where("id IN ?", ids).Find(&playlists).Error
 	if err != nil {
 		return nil, err
 	}
@@ -228,5 +254,63 @@ func (ps *PlaylistStore) GetRootFolderID(userID uuid.UUID) (uuid.UUID, error) {
 }
 
 func (ps *PlaylistStore) GetPlaylistsPaginated(page, limit int) ([]model.Playlist, bool, error) {
-	return Paginate[model.Playlist](ps.db, page, limit, "name asc", []string{"Songs", "PlaylistFolder.User"})
+	return Paginate[model.Playlist](ps.db, page, limit, "name asc", []string{"PlaylistSongs.Song", "PlaylistFolder.User"})
+}
+
+func (ps *PlaylistStore) GetPlaylistSongs(playlistID uuid.UUID) ([]model.PlaylistSong, error) {
+	var songs []model.PlaylistSong
+	err := ps.db.Where("playlist_id = ?", playlistID).Order("\"order\" ASC, created_at ASC").Find(&songs).Error
+	if err != nil {
+		return nil, err
+	}
+	return songs, nil
+}
+
+// BackfillPlaylistOrder iterates through all existing Playlist-Song links
+// If any link has an empty 'Order', it assigns sequential fractional keys
+// ordered by CreatedAt.
+func (ps *PlaylistStore) BackfillPlaylistOrder() error {
+	// 1. Find all distinct playlist IDs that have at least one song with empty order
+	var playlistIDs []uuid.UUID
+	err := ps.db.Model(&model.PlaylistSong{}).
+		Where("\"order\" = ?", "").
+		Distinct("playlist_id").
+		Pluck("playlist_id", &playlistIDs).Error
+
+	if err != nil {
+		return err
+	}
+
+	if len(playlistIDs) == 0 {
+		return nil // Nothing to backfill
+	}
+
+	for _, pid := range playlistIDs {
+		var mappings []model.PlaylistSong
+		if err := ps.db.Where("playlist_id = ?", pid).
+			Order("created_at ASC").
+			Find(&mappings).Error; err != nil {
+			return err
+		}
+
+		currentOrder := ""
+		tx := ps.db.Begin()
+		for _, m := range mappings {
+
+			nextOrder := utils.GenerateNextKey(currentOrder)
+
+			if err := tx.Model(&model.PlaylistSong{}).
+				Where("playlist_id = ? AND song_id = ?", m.PlaylistID, m.SongID).
+				Update("order", nextOrder).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+			currentOrder = nextOrder
+		}
+		if err := tx.Commit().Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

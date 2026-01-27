@@ -17,6 +17,7 @@ Backend (Go) for a decentralized music platform paired with an offline-first Flu
 - **Structure**: `main.go` entry. `router/` setup. `handler/routes.go` endpoints. `model/` GORM structs.
 - **Data**: `data/` volume persists `/album_covers`, `/songs`, `/db`.
 - **Config**: Uses development version of `docker-compose.yml`
+- **Logging**: `log.Printf` to log.
 
 ## Database
 - **Identifiers** Special entities only for songs, albums, artists. Used for cross-referencing.

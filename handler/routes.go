@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/ProjectDistribute/distributor/middleware"
@@ -65,6 +66,7 @@ func (h *Handler) Register(public *echo.Group) {
 	playlist.POST("/songs", Handle(h.AddSongToPlaylist))
 	playlist.POST("/create-with-contents", Handle(h.CreatePlaylistWithContents))
 	playlist.DELETE("/songs/:song_id", Handle(h.RemoveSongFromPlaylist))
+	playlist.PUT("/songs/:song_id", Handle(h.UpdatePlaylistSongOrder))
 
 	songs := public.Group("/songs")
 	songs.GET("", h.GetSongs)
@@ -136,6 +138,7 @@ func (h *Handler) Register(public *echo.Group) {
 	admin.DELETE("/files/cleanup", h.CleanSongFiles)
 	admin.GET("/settings", h.GetSettings)
 	admin.PUT("/settings", h.UpdateSettings)
+	// admin.POST("/rebalance-playlists", Handle(h.RebalanceAllPlaylists))
 }
 
 func getJWTSecret() string {
@@ -151,7 +154,7 @@ func getJWTSecret() string {
 		}
 		secret := hex.EncodeToString(bytes)
 		if err := os.WriteFile(secretPath, []byte(secret), 0600); err != nil {
-			fmt.Printf("Warning: Failed to persist JWT secret to %s: %v. Check permissions.\n", secretPath, err)
+			log.Printf("Warning: Failed to persist JWT secret to %s: %v. Check permissions.\n", secretPath, err)
 		} else {
 			fmt.Println("Generated and persisted new JWT secret to data/db/jwt_secret")
 		}

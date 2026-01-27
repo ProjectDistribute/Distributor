@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -55,7 +56,7 @@ func NewSearchService() (*SearchService, error) {
 				break
 			}
 			if i%60 == 0 {
-				fmt.Printf("Waiting for Meilisearch... (%d/60)\n", i+1)
+				log.Printf("Waiting for Meilisearch... (%d/60)\n", i+1)
 			}
 			time.Sleep(1 * time.Second)
 		}
@@ -64,10 +65,16 @@ func NewSearchService() (*SearchService, error) {
 			return
 		}
 
-		_, err := client.CreateIndex(&meilisearch.IndexConfig{
-			Uid:        "music",
-			PrimaryKey: "id",
-		})
+		searchIndexResult, err := client.GetIndex("music")
+		if err != nil || searchIndexResult == nil {
+			_, err = client.CreateIndex(&meilisearch.IndexConfig{
+				Uid:        "music",
+				PrimaryKey: "id",
+			})
+			if err != nil {
+				log.Printf("Failed to create index: %v\n", err)
+			}
+		}
 		rankingRules := []string{
 			"words",
 			"typo",
@@ -89,7 +96,7 @@ func NewSearchService() (*SearchService, error) {
 			SortableAttributes:   sortableAttributes,
 		})
 		if err != nil {
-			fmt.Printf("Failed to update Meilisearch settings: %v\n", err)
+			log.Printf("Failed to update Meilisearch settings: %v\n", err)
 		}
 		fmt.Println("Meilisearch connected and configured.")
 	}()

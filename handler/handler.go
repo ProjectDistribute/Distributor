@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+
 	"github.com/ProjectDistribute/distributor/service"
 	"github.com/ProjectDistribute/distributor/store"
 	"gorm.io/gorm"
@@ -58,6 +60,11 @@ func GigaHandler(d *gorm.DB, storage service.FileStorage, version string) *Handl
 	playlist_store := store.NewPlaylistStore(d)
 	settings_store := store.NewSettingsStore(d)
 
+	// One-time backfill for playlist ordering
+	if err := playlist_store.BackfillPlaylistOrder(); err != nil {
+		log.Printf("Failed to backfill playlist order: %v\n", err)
+	}
+
 	// Services
 	search_svc, _ := service.NewSearchService()
 	mail_svc := service.NewMailService(mail_store, settings_store)
@@ -72,6 +79,5 @@ func GigaHandler(d *gorm.DB, storage service.FileStorage, version string) *Handl
 
 	// // Handlers
 	h := NewHandler(version, d, song_svc, mail_svc, artist_svc, album_svc, user_svc, playlist_svc, search_svc, stats_svc, settings_store)
-	// ensureAdminUser removed - handled by setup wizard
 	return h
 }

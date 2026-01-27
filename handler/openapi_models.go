@@ -32,14 +32,19 @@ type User struct {
 }
 
 type Playlist struct {
-	ID       uuid.UUID   `json:"id"`
-	Name     string      `json:"name"`
-	FolderID uuid.UUID   `json:"folder_id"`
-	UserID   uuid.UUID   `json:"user_id"`
-	SongIDs  []uuid.UUID `json:"song_ids"`
+	ID            uuid.UUID              `json:"id"`
+	Name          string                 `json:"name"`
+	FolderID      uuid.UUID              `json:"folder_id"`
+	UserID        uuid.UUID              `json:"user_id"`
+	PlaylistSongs []PlaylistSongResponse `json:"playlist_songs"`
 	// Songs     []Song    `json:"songs"`
 	User      *User     `json:"user,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type PlaylistSongResponse struct {
+	SongID uuid.UUID `json:"song_id"`
+	Order  string    `json:"order"`
 }
 
 type PlaylistFolder struct {
@@ -167,9 +172,12 @@ func FromPlaylistModel(m model.Playlist) Playlist {
 		p.User = &u
 	}
 
-	p.SongIDs = make([]uuid.UUID, len(m.Songs))
-	for i, s := range m.Songs {
-		p.SongIDs[i] = s.ID
+	p.PlaylistSongs = make([]PlaylistSongResponse, len(m.PlaylistSongs))
+	for i, s := range m.PlaylistSongs {
+		p.PlaylistSongs[i] = PlaylistSongResponse{
+			SongID: s.SongID,
+			Order:  s.Order,
+		}
 	}
 	return p
 }

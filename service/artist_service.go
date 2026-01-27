@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/ProjectDistribute/distributor/model"
 	"github.com/ProjectDistribute/distributor/store"
@@ -65,7 +66,7 @@ func (s *ArtistService) UpdateArtist(id uuid.UUID, name string) (*model.Artist, 
 		return nil, err
 	}
 	if err := s.SearchSvc.IndexArtist(artist); err != nil {
-		fmt.Printf("Error indexing artist %s: %v\n", artist.ID, err)
+		log.Printf("Error indexing artist %s: %v\n", artist.ID, err)
 	}
 	return artist, nil
 }
@@ -79,7 +80,7 @@ func (s *ArtistService) DeleteArtist(id uuid.UUID) error {
 		return err
 	}
 	if err := s.SearchSvc.DeleteDocument(id); err != nil {
-		fmt.Printf("Error removing artist %s from index: %v\n", id, err)
+		log.Printf("Error removing artist %s from index: %v\n", id, err)
 	}
 	return nil
 }

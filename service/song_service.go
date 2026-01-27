@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,7 +69,7 @@ func (s *SongService) CreateSong(title string, artistsInput []SongCreationArtist
 		return nil, err
 	}
 	if existingSong != nil {
-		fmt.Printf("Song %s already exists in album %s\n", title, album.Title)
+		log.Printf("Song %s already exists in album %s\n", title, album.Title)
 		return existingSong, fmt.Errorf("song '%s' already exists in album '%s'", title, album.Title)
 	}
 
@@ -77,7 +78,7 @@ func (s *SongService) CreateSong(title string, artistsInput []SongCreationArtist
 		AlbumID: album.ID,
 		Artists: artists,
 	}
-	fmt.Printf("Creating song %s\n", song.Title)
+	log.Printf("Creating song %s\n", song.Title)
 	if err := s.Store.CreateSong(song); err != nil {
 		return nil, err
 	}
@@ -85,7 +86,7 @@ func (s *SongService) CreateSong(title string, artistsInput []SongCreationArtist
 	song.Album = *album
 
 	if err := s.SearchSvc.IndexSong(song); err != nil {
-		fmt.Printf("Error indexing song %s: %v\n", song.ID, err)
+		log.Printf("Error indexing song %s: %v\n", song.ID, err)
 	}
 
 	// Re-index album to update its artist name (sub) in search
@@ -157,7 +158,7 @@ func (s *SongService) UpdateSong(songID uuid.UUID, title string, artistsInput []
 
 	// TODO: We are indexing only songs. Index albums and artists too.
 	if err := s.SearchSvc.IndexSong(song); err != nil {
-		fmt.Printf("Error re-indexing song %s: %v\n", song.ID, err)
+		log.Printf("Error re-indexing song %s: %v\n", song.ID, err)
 	}
 
 	// Re-index album to update its artist name (sub) in search
@@ -249,7 +250,7 @@ func (s *SongService) DeleteSong(songID uuid.UUID) error {
 	// Auto-delete logic removed to allow empty albums in admin panel
 
 	if err := s.SearchSvc.DeleteDocument(songID); err != nil {
-		fmt.Printf("Error removing song %s from index: %v\n", songID, err)
+		log.Printf("Error removing song %s from index: %v\n", songID, err)
 	}
 
 	return nil
@@ -264,7 +265,7 @@ func (s *SongService) DeleteSongFile(fileID uuid.UUID) error {
 	// Delete from storage
 	path := file.FilePath()
 	if err := s.Storage.Delete(path); err != nil {
-		fmt.Printf("Warning: failed to delete file from storage %s: %v\n", path, err)
+		log.Printf("Warning: failed to delete file from storage %s: %v\n", path, err)
 		// We continue to delete from DB even if storage delete fails (maybe file missing)
 	}
 
@@ -321,7 +322,7 @@ func (s *SongService) ProbeDuration(path string) (float64, error) {
 
 	default:
 		// Unsupported format for duration probing
-		fmt.Printf("Warning: Duration probing not supported for %s\n", ext)
+		log.Printf("Warning: Duration probing not supported for %s\n", ext)
 		return 0, nil
 	}
 }
@@ -336,7 +337,7 @@ func (s *SongService) resolveArtists(artistsInput []SongCreationArtist) ([]model
 		if id, uuidErr := uuid.Parse(a.Identifier); uuidErr == nil {
 			artist, err = s.ArtistSvc.Store.GetArtistByID(id)
 			if err == nil {
-				fmt.Printf("Artist %s found by ID, using existing artist\n", a.Name)
+				log.Printf("Artist %s found by ID, using existing artist\n", a.Name)
 			} else {
 				artist = nil
 			}
@@ -345,13 +346,13 @@ func (s *SongService) resolveArtists(artistsInput []SongCreationArtist) ([]model
 		if artist == nil {
 			artist, err = s.ArtistSvc.GetArtistByIdentifier(a.Identifier)
 			if err != nil {
-				fmt.Printf("Artist %s not found, creating new artist\n", a.Name)
+				log.Printf("Artist %s not found, creating new artist\n", a.Name)
 				artist, err = s.ArtistSvc.CreateArtist(a.Name, []string{a.Identifier})
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				fmt.Printf("Artist %s found, using existing artist\n", a.Name)
+				log.Printf("Artist %s found, using existing artist\n", a.Name)
 			}
 		}
 		artists = append(artists, *artist)

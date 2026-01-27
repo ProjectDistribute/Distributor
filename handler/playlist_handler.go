@@ -339,6 +339,60 @@ func (h *Handler) RemoveSongFromPlaylist(c *middleware.CustomContext) error {
 	return c.JSON(200, nil)
 }
 
+// UpdatePlaylistSongOrder godoc
+// @Summary Update song order in playlist
+// @Description Updates the order of a song in a playlist.
+// @Tags playlists
+// @Security BearerAuth
+// @Produce json
+// @Param playlist_id path string true "Playlist ID (UUID)"
+// @Param song_id path string true "Song ID (UUID)"
+// @Param request body map[string]string true "Order payload"
+// @Success 200 {object} nil
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /playlists/{playlist_id}/songs/{song_id} [put]
+func (h *Handler) UpdatePlaylistSongOrder(c *middleware.CustomContext) error {
+	playlistID, err := c.GetUUID("playlist_id")
+	if err != nil {
+		return echo.NewHTTPError(400, "Invalid playlist ID")
+	}
+
+	playlist, err := h.playlist_svc.Store.GetPlaylistByID(playlistID)
+	if err != nil {
+		return echo.NewHTTPError(500, err.Error())
+	}
+	if playlist == nil {
+		return echo.NewHTTPError(404, "Playlist not found")
+	}
+
+	me := c.Get("user").(*jwt.Token).Claims.(*middleware.JwtCustomClaims)
+	if playlist.UserID != me.UUID() && !me.Admin {
+		return echo.NewHTTPError(403, "Forbidden")
+	}
+
+	songID, err := c.GetUUID("song_id")
+	if err != nil {
+		return echo.NewHTTPError(400, "Invalid song ID")
+	}
+
+	type OrderInput struct {
+		Order string `json:"order" validate:"required"`
+	}
+	var input OrderInput
+	if err := c.Bind(&input); err != nil {
+		return echo.NewHTTPError(400, "Invalid input")
+	}
+
+	err = h.playlist_svc.Store.UpdateSongOrder(playlistID, songID, input.Order)
+	if err != nil {
+		return echo.NewHTTPError(500, err.Error())
+	}
+
+	return c.JSON(200, nil)
+}
+
 // DeletePlaylist godoc (DEPRECATED: Use DeletePlaylistByID)
 func (h *Handler) DeletePlaylist(c *middleware.CustomContext) error {
 	return echo.NewHTTPError(http.StatusGone, "This endpoint is deprecated. Use DELETE /playlists/:id instead.")

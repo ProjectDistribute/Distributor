@@ -18,5 +18,5 @@ type Playlist struct {
 	PlaylistFolder *PlaylistFolder `gorm:"foreignKey:FolderID"`
 	UserID         uuid.UUID       `gorm:"type:uuid;index;not null"`
 
-	Songs []Song `gorm:"many2many:playlist_songs;constraint:OnDelete:CASCADE;"`
+	PlaylistSongs []PlaylistSong `gorm:"foreignKey:PlaylistID;constraint:OnDelete:CASCADE;"`
 }

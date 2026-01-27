@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -15,7 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var version = "s0.2.1"
+var version = "s0.2.3"
 
 // @title Distributor API
 // @version 1.0
@@ -42,7 +41,7 @@ func main() {
 	// Logging setup
 	logFile, err := os.OpenFile("data/server_events.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Printf("Failed to open log file: %v\n", err)
+		log.Printf("Failed to open log file: %v\n", err)
 	} else {
 		multiWriter := io.MultiWriter(os.Stdout, logFile)
 		log.SetOutput(multiWriter)
@@ -76,7 +75,7 @@ func main() {
 		"Should've named the client \"W App\"",
 	}
 
-	fmt.Printf(`
+	log.Printf(`
 ---------------------------------------------------------------------
 Welcome to
 

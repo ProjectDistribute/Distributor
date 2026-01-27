@@ -9,6 +9,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -65,7 +66,7 @@ func (s *AlbumService) CreateAlbum(title string, releaseDate time.Time, artistNa
 	}
 
 	if err := s.SearchSvc.IndexAlbum(createdAlbum); err != nil {
-		fmt.Printf("Error indexing album %s: %v\n", createdAlbum.ID, err)
+		log.Printf("Error indexing album %s: %v\n", createdAlbum.ID, err)
 	}
 
 	return createdAlbum, nil
@@ -85,7 +86,7 @@ func (s *AlbumService) GetOrCreateAlbum(title string, artists []model.Artist) (*
 			for _, songArtist := range song.Artists {
 				for _, artist := range artists {
 					if songArtist.ID == artist.ID {
-						fmt.Printf("Album %s found, using existing album\n", album.Title)
+						log.Printf("Album %s found, using existing album\n", album.Title)
 						return &album, nil
 					}
 				}
@@ -93,7 +94,7 @@ func (s *AlbumService) GetOrCreateAlbum(title string, artists []model.Artist) (*
 		}
 	}
 
-	fmt.Printf("Album %s not found, creating new album\n", title)
+	log.Printf("Album %s not found, creating new album\n", title)
 	newAlbum := &model.Album{Title: title}
 	if err := s.createAlbumFromModel(newAlbum); err != nil {
 		return nil, err

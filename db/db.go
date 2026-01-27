@@ -15,7 +15,7 @@ import (
 func New() (*gorm.DB, error) {
 	// Check database directory permissions
 	if err := os.WriteFile("data/db/.test", []byte(""), 0644); err != nil {
-		fmt.Printf("FATAL: Cannot write to data/db: %v\n", err)
+		log.Printf("FATAL: Cannot write to data/db: %v\n", err)
 		fmt.Println("This is likely a permission issue. If running in Docker on Linux, ensure the host directory is writable by the container user.")
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func AutoMigrate(db *gorm.DB) error {
 	if db == nil {
 		return fmt.Errorf("db is nil")
 	}
-	db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&model.Song{},
 		&model.SongFile{},
 		&model.RequestMail{},
@@ -53,7 +53,15 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.User{},
 		&model.Playlist{},
 		&model.PlaylistFolder{},
+		&model.PlaylistSong{},
 		&model.Setting{},
-	)
+	); err != nil {
+		return err
+	}
+
+	if err := BackfillOrdering(db); err != nil {
+		log.Printf("WARNING: Backfill failed: %v\n", err)
+		return err
+	}
 	return nil
 }
