@@ -119,12 +119,13 @@ func (h *Handler) Register(public *echo.Group) {
 
 	// Global Playlist Endpoints
 	globalPlaylists := public.Group("/playlists", jwt)
-	globalPlaylists.GET("/:id", h.GetPlaylistByID)
-	globalPlaylists.PUT("/:id", h.UpdatePlaylistByID)
-	globalPlaylists.DELETE("/:id", h.DeletePlaylistByID)
-	globalPlaylists.POST("/:id/songs", Handle(h.AddSongToPlaylist))
-	globalPlaylists.DELETE("/:id/songs/:song_id", Handle(h.RemoveSongFromPlaylist))
-	globalPlaylists.PUT("/:id/move", Handle(h.MovePlaylistToFolder))
+	globalPlaylists.GET("/:playlist_id", h.GetPlaylistByID)
+	globalPlaylists.PUT("/:playlist_id", h.UpdatePlaylistByID)
+	globalPlaylists.DELETE("/:playlist_id", h.DeletePlaylistByID)
+	globalPlaylists.POST("/:playlist_id/songs", Handle(h.AddSongToPlaylist))
+	globalPlaylists.DELETE("/:playlist_id/songs/:song_id", Handle(h.RemoveSongFromPlaylist))
+	globalPlaylists.PUT("/:playlist_id/songs/:song_id", Handle(h.UpdatePlaylistSongOrder))
+	globalPlaylists.PUT("/:playlist_id/move", Handle(h.MovePlaylistToFolder))
 
 	admin := public.Group("/admin", jwt, AdminMiddleware)
 	admin.GET("/stats", h.GetStats)

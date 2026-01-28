@@ -706,7 +706,7 @@ func (h *Handler) GetPlaylists(c echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /playlists/{id} [get]
 func (h *Handler) GetPlaylistByID(c echo.Context) error {
-	playlistID, err := uuid.Parse(c.Param("id"))
+	playlistID, err := uuid.Parse(c.Param("playlist_id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid playlist ID")
 	}
@@ -747,7 +747,7 @@ func (h *Handler) GetPlaylistByID(c echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /playlists/{id} [put]
 func (h *Handler) UpdatePlaylistByID(c echo.Context) error {
-	playlistID, err := uuid.Parse(c.Param("id"))
+	playlistID, err := uuid.Parse(c.Param("playlist_id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid playlist ID")
 	}
@@ -799,7 +799,7 @@ func (h *Handler) UpdatePlaylistByID(c echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /playlists/{id} [delete]
 func (h *Handler) DeletePlaylistByID(c echo.Context) error {
-	playlistID, err := uuid.Parse(c.Param("id"))
+	playlistID, err := uuid.Parse(c.Param("playlist_id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid playlist ID")
 	}
